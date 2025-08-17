@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>DePost</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        html, body { height: 97%; }
+        body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; max-width:900px; margin:40px auto; padding:0 20px; color:#111; display: grid; grid-template-rows: 1fr auto; }
+        h1 { font-size:1.6rem; margin-bottom:0.2rem; }
+        textarea { width:100%; height:200px; padding:12px; font-size:1rem; box-sizing:border-box; border-radius:8px; border:1px solid #ddd; resize:vertical; }
+        .controls { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+        button { padding:10px 14px; border-radius:8px; border:1px solid #ccc; background:#f7f7f7; cursor:pointer; }
+        button.primary { background:#0366d6; color:white; border-color:#0356b6; }
+        .status { margin-top:12px; padding:10px; border-radius:8px; background:#f1f8ff; border:1px solid #dbeafe; }
+        .error { background:#fff0f0; border:1px solid #ffd2d2; }
+        label.small { display:block; margin-top:8px; font-size:0.9rem; color:#444; }
+        .txlink { word-break:break-all; }
+        label, select { font-size: 1rem; margin-bottom: 1rem; display: block; width: 100%; }
+        select { padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; max-width: 200px; }
+        footer{ text-align:center; color:var(--muted); font-size:13px; padding:20px; background:#fff; }
+    </style>
+</head>
+<body>
+    <main>
+    <h1>DePost</h1>
+    <h4>Publish and store your content on web3 permnanelty!</h4>
+    <p>A simple tool to publish a blog/message to the Permaweb using Arweave! This allows you to keep your content alive without any service interruptions or downtime.</p>
+    <label for="contentType" class="small">Content Type</label>
+    <select id="contentType" name="contentType">
+        <option value="text/plain">Plain Text</option>
+        <option value="text/html">HTML</option>
+    </select>
+
+    <label class="small">Blog/Message</label>
+    <textarea id="message" placeholder="Type anything you want to store permanently on Arweave..."></textarea>
+
+    <div class="controls">
+        <button id="connectBtn">Connect Wallet</button>
+        <button id="uploadBtn" class="primary">Publish to Arweave</button>
+        <button id="clearBtn">Clear</button>
+    </div>
+
+    <div id="status" class="status" style="display:none;"></div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/arweave/bundles/web.bundle.min.js"></script>
+    <script>
+        (function(){
+            const connectBtn = document.getElementById('connectBtn');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const statusEl = document.getElementById('status');
+            const messageEl = document.getElementById('message');
+            const contentType = document.getElementById('contentType');
+
+            const arweave = Arweave.init({ host: 'arweave.net', port: 443, protocol: 'https' });
+
+            function showStatus(html, isError=false){
+                statusEl.style.display = 'block';
+                statusEl.innerHTML = html;
+                statusEl.className = isError ? 'status error' : 'status';
+                statusEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+            }
+
+            async function walletAvailable(){
+                return !!window.arweaveWallet;
+            }
+
+            async function connectWallet(){
+                if (window.arweaveWallet) {
+                    try {
+                        await window.arweaveWallet.connect(["ACCESS_ADDRESS", "SIGN_TRANSACTION", "DISPATCH"]);
+                        const address = await window.arweaveWallet.getActiveAddress();
+                        showStatus('Wallet Connected');
+                    } catch (err) {
+                        console.error(err);
+                        showStatus('Failed to connect wallet', true);
+                        console.log(err?.message || err);
+                    }
+                } else {
+                    // Mobile deep link fallback for ArConnect
+                    const permissions = encodeURIComponent(JSON.stringify(["ACCESS_ADDRESS", "SIGN_TRANSACTION", "DISPATCH"]));
+                    const callbackUrl = encodeURIComponent(window.location.href);
+                    const deepLink = `arconnect://wallet/connect?permissions=${permissions}&callback=${callbackUrl}`;
+                    window.location.href = deepLink;
+                }
+            }
+
+            async function walletSign(tx){
+                if (!window.arweaveWallet) throw new Error('No browser wallet injected.');
+                if (typeof window.arweaveWallet.signTransaction === 'function') {
+                    return await window.arweaveWallet.signTransaction(tx);
+                }
+                if (typeof window.arweaveWallet.sign === 'function') {
+                    return await window.arweaveWallet.sign(tx);
+                }
+                throw new Error('Connected wallet does not expose a recognized signing API.');
+            }
+
+            async function uploadMessage(){
+                const text = messageEl.value;
+                const contentTypeValue = contentType.value;
+                if (!text.trim()) {
+                    showStatus('Please type a message before uploading.', true);
+                    return;
+                }
+                if (!await walletAvailable()) {
+                    showStatus('No Arweave wallet detected. Please install an Arweave wallet such as <a href="https://arweave.app/" target="_blank">arweave.app</a> to proceed.', true);
+                    return;
+                }
+
+                try {
+                    showStatus('Creating transaction...');
+                    const txBS = await arweave.createTransaction({ data: text });
+                    txBS.addTag('App-Name', 'DePost');
+                    txBS.addTag('Content-Type', contentTypeValue);
+
+                    showStatus('Requesting wallet signature...');
+                    const tx = await walletSign(txBS);
+                    showStatus('Posting transaction to the network...');
+
+                    const response = await arweave.transactions.post(tx);
+                    if (response && (response.status === 200 || response.status === 202)) {
+                        const txid = tx.id;
+                        const postLink = 'https://arweave.net/' + txid;
+                        const blockLink = 'https://viewblock.io/arweave/tx/' + txid;
+                        showStatus('Upload successful! Transaction ID: <span class="txlink"><a href="' + blockLink + '" target="_blank" rel="noopener">' + txid + '</a></span><br><br>* Please note it can take some time for your transaction details to appear. In the meantime you can view your post <span class="txlink"><a href="' + postLink + '" target="_blank" rel="noopener">here</a></span>.');
+                    } else {
+                        showStatus('Insufficient funds - could not cover the transaction fee.', true);
+                        console.log(JSON.stringify(response));
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showStatus('An unexpected error occured. Please try again.', true);
+                    console.log(err?.message || err);
+                }
+            }
+
+            connectBtn.addEventListener('click', connectWallet);
+            uploadBtn.addEventListener('click', uploadMessage);
+            clearBtn.addEventListener('click', ()=>{ messageEl.value = ''; });
+
+            (async function init(){
+                if (await walletAvailable()) {
+                    showStatus('Arweave wallet detected. Click "Connect Wallet" to continue.');
+                } else {
+                    showStatus('No Arweave wallet detected. Please install an Arweave wallet such as <a href="https://arweave.app/" target="_blank">arweave.app</a> to proceed.', true);
+                }
+            })();
+        })();
+    </script>
+    <footer>
+        <p>Made With ❤️ By <a href="https://labs.maymandi.com" target="_blank" style="color:inherit;text-decoration:none;">Maymandi Labs</a></p>
+    </footer>
+</body>
+</html>
