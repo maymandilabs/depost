@@ -1,4 +1,5 @@
 # DePost
+![DePost](https://depost.app/assets/depost_webapp.png)
 DePost is a simple web app that allows you to publish a message or a post to Arweave. 
 
 This allows you to store your message or post on the permaweb permanently without any interruptions or censorship. 
