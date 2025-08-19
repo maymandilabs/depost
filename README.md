@@ -1,6 +1,6 @@
 # DePost
 <p align="center">
-<img src="https://depost.app/assets/depost_webapp.png" alt="DePost" width="600" height="800">
+<img src="https://depost.app/assets/depost_webapp.png" alt="DePost" width="600" height="800" style="border:2px solid black;">
 </p>
 
 DePost is a simple web app that allows you to publish a message or a post to Arweave. 
