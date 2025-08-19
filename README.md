@@ -5,7 +5,7 @@ This allows you to store your message or post on the permaweb permanently withou
 
 
 <p align="center">
-  <img src="https://depost.app/assets/depost_webapp.png" alt="DePost" width="600" height="800">
+  <img src="https://depost.app/assets/depost_webeapp.png" alt="DePost" width="600" height="800">
 </p>
 
 ## Installation
