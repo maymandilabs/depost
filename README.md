@@ -1,6 +1,6 @@
 # DePost
-<img src="[path/to/image.png](https://depost.app/assets/depost_webapp.png)" alt="Alt text" width="300" height="200">
-![DePost](https://depost.app/assets/depost_webapp.png)
+<center><img src="https://depost.app/assets/depost_webapp.png" alt="DePost" width="200" height="300"></center>
+
 DePost is a simple web app that allows you to publish a message or a post to Arweave. 
 
 This allows you to store your message or post on the permaweb permanently without any interruptions or censorship. 
