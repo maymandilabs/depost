@@ -45,6 +45,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/arweave/bundles/web.bundle.min.js"></script>
+    <script src="config.js"></script>
     <script>
         (function(){
             const connectBtn = document.getElementById('connectBtn');
@@ -54,7 +55,7 @@
             const messageEl = document.getElementById('message');
             const contentType = document.getElementById('contentType');
 
-            const arweave = Arweave.init({ host: 'arweave.net', port: 443, protocol: 'https' });
+            const arweave = Arweave.init({ host: HOST, port: PORT, protocol: PROTOCOL});
 
             function showStatus(html, isError=false){
                 statusEl.style.display = 'block';
@@ -123,8 +124,8 @@
                     const response = await arweave.transactions.post(tx);
                     if (response && (response.status === 200 || response.status === 202)) {
                         const txid = tx.id;
-                        const postLink = 'https://arweave.net/' + txid;
-                        const blockLink = 'https://viewblock.io/arweave/tx/' + txid;
+                        const postLink = POST_LINK_BASE + txid;
+                        const blockLink = BLOCK_LINK_BASE + txid;
                         showStatus('Upload successful! Transaction ID: <span class="txlink"><a href="' + blockLink + '" target="_blank" rel="noopener">' + txid + '</a></span><br><br>* Please note it can take some time for your transaction details to appear. In the meantime you can view your post <span class="txlink"><a href="' + postLink + '" target="_blank" rel="noopener">here</a></span>.');
                     } else {
                         showStatus('Insufficient funds - could not cover the transaction fee.', true);
